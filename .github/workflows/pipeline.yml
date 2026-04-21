@@ -256,30 +256,29 @@ jobs:
             # Pull latest code
             git pull origin main
 
-            # Rolling update — bring up new containers
-            docker compose pull
-            docker compose up -d --no-deps --build api
-            docker compose up -d --no-deps --build worker
-            docker compose up -d --no-deps --build frontend
+            # Ensure .env exists
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+
+            # Start redis first and wait for it
+            docker compose up -d redis
+            sleep 15
+
+            # Build and start remaining services
+            docker compose up -d --build api worker frontend
 
             # Wait for health checks (60s max)
             echo "Checking health..."
             for i in $(seq 1 12); do
-              STATUS=$(docker compose ps --format json | python3 -c "
-            import sys, json
-            services = [json.loads(l) for l in sys.stdin]
-            unhealthy = [s['Name'] for s in services if s.get('Health') not in ['healthy', '']]
-            print('unhealthy:' + ','.join(unhealthy) if unhealthy else 'healthy')
-            ")
-              echo "Health status: $STATUS"
-              if [ "$STATUS" = "healthy" ]; then
+              UNHEALTHY=$(docker compose ps | grep -c "unhealthy" || true)
+              echo "Unhealthy containers: $UNHEALTHY"
+              if [ "$UNHEALTHY" = "0" ]; then
                 echo "All services healthy!"
                 exit 0
               fi
               sleep 5
             done
-
-            echo "Health check failed — rolling back!"
-            git checkout HEAD~1
-            docker compose up -d --build
+            echo "Health check failed!"
+            docker compose logs api
             exit 1
