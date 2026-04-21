@@ -36,7 +36,7 @@ jobs:
         run: cd frontend && npm install
 
       - name: Lint JavaScript
-        run: cd frontend && npx eslint app.js
+        run: cd frontend && npm ci && ./node_modules/.bin/eslint app.js
 
       - name: Lint Dockerfiles (hadolint)
         uses: hadolint/hadolint-action@v3.1.0
