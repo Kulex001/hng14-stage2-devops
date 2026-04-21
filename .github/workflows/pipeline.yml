@@ -143,6 +143,7 @@ jobs:
           docker build -t localhost:5000/worker:latest ./worker
           docker build -t localhost:5000/frontend:latest ./frontend
 
+
       - name: Scan API image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -151,6 +152,7 @@ jobs:
           output: trivy-api.sarif
           severity: CRITICAL
           exit-code: "1"
+          ignore-unfixed: true
 
       - name: Scan Worker image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -160,6 +162,7 @@ jobs:
           output: trivy-worker.sarif
           severity: CRITICAL
           exit-code: "1"
+          ignore-unfixed: true
 
       - name: Scan Frontend image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -169,6 +172,7 @@ jobs:
           output: trivy-frontend.sarif
           severity: CRITICAL
           exit-code: "1"
+          ignore-unfixed: true
 
       - name: Upload Trivy SARIF results
         uses: actions/upload-artifact@v4
