@@ -202,16 +202,26 @@ jobs:
 
       - name: Submit a job and poll for completion
         run: |
-          # Submit job through frontend
-          JOB=$(curl -sf -X POST http://localhost:3000/jobs \
-            -H "Content-Type: application/json" \
-            -d '{"type": "test-job"}')
+          # Wait for frontend to be ready
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+              echo "Frontend is ready!"
+              break
+            fi
+            echo "Waiting for frontend... attempt $i"
+            sleep 5
+          done
+
+          # Submit job through correct endpoint
+          JOB=$(curl -sf -X POST http://localhost:3000/submit \
+            -H "Content-Type: application/json")
           echo "Submitted job: $JOB"
-          JOB_ID=$(echo $JOB | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          JOB_ID=$(echo $JOB | python3 -c "import sys,json; print(json.load(sys.stdin)['job_id'])")
+          echo "Job ID: $JOB_ID"
 
           # Poll until complete (max 60s)
           for i in $(seq 1 12); do
-            STATUS=$(curl -sf http://localhost:3000/jobs/$JOB_ID | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+            STATUS=$(curl -sf http://localhost:3000/status/$JOB_ID | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
             echo "Status: $STATUS"
             if [ "$STATUS" = "completed" ]; then
               echo "Job completed successfully!"
